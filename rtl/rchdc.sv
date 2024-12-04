@@ -21,8 +21,12 @@ module rchdc (
     input wire clk, rst_n,
     input wire [`DIM - 1 : 0] im_value,
     input wire [`DIM - 1 : 0] im_pos,
-    input wire [`CLS_DW - 1 : 0] label
+    input wire state,
+    input wire [`CLS_DW - 1 : 0] label,
+    output logic [`CLS_DW - 1 : 0] predict
 );
+
+//==================== Encode one sample ====================
     // samples in
     logic smp_in, smp_done;
 
@@ -76,6 +80,7 @@ module rchdc (
         end
     endgenerate
 
+//==================== For training, sum up all the samples ====================
     logic train_done;
     CounterMax #(
         .DW     (`SMP_NUM_DW)
@@ -96,15 +101,37 @@ module rchdc (
         .rst_n  (rst_n      ),
         .clr    (clear      ),
         .en     (smp_in     ),
-        .data   (im_bit_nb  ),
+        .data   (am_sample  ),
         .acc    (sample_sum )
     );
 
+// update the AM
     logic [`DIM - 1 : 0] AM [`CLS_NUM - 1 : 0];
 
     always_ff@(posedge clk) begin
-        if(train_done) AM[label] <= im_bit_nb;
+        if(train_done) AM[label] <= am_sample;
     end
 
+//==================== For interfering, query the AM ====================
+    // Check similarity
+    generate
+        for (genvar l = 0; l < `CLS_NUM; l++) begin : simi_cls
+            logic [$clog2(`DIM) - 1 : 0] cls_simi;
+            similarity simi(
+                .clk    (clk        ),
+                .rst_n  (rst_n      ),
+                .a      (AM[l]      ),
+                .b      (am_sample  ),
+                .simi   (cls_simi   )
+            );            
+        end
+    endgenerate
+
+    // find the maximum class
+    logic [`CLS_DW : 0] cls_mimi;
+    assign cls_mimi = (simi_cls[0].cls_simi > simi_cls[1].cls_simi ) ? 
+                simi_cls[0].cls_simi : simi_cls[1].cls_simi;
+
+    assign predict = cls_mimi;
 
 endmodule

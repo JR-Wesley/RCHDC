@@ -1,6 +1,0 @@
-<testsuites name="results">
-  <testsuite name="all" package="all">
-    <property name="random_seed" value="1733145208" />
-    <testcase name="testbench" classname="testbench" file="/home/maria/v/hdc/pysim/testbench.py" lineno="11" time="0.00432896614074707" sim_time_ns="6000000000" ratio_time="1386012226689.4312" />
-  </testsuite>
-</testsuites>

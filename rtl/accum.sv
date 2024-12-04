@@ -19,6 +19,7 @@ module accum #(
     end
 
 endmodule
+
 // module accum #(
 //     parameter DW = 8 
 //     )(
