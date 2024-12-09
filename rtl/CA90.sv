@@ -17,7 +17,9 @@ module CA90 (
     input  wire  [`DIM - 1 : 0] vec,
     output logic [`DIM - 1 : 0] vec_next
 );
+  // TODO: CA90 rules for random generating
   logic [`DIM - 1 : 0] vec_left, vec_right;
+
 
   assign vec_left  = {vec[`DIM-2 : 0], vec[`DIM-1]};
   assign vec_right = {vec[0], vec[`DIM-1 : 1]};

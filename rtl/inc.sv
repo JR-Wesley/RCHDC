@@ -15,7 +15,7 @@ module inc #(
   assign acc_next = clr ? '0 : en ? (acc + one_bit) : acc;
 
   always_ff @(posedge clk, negedge rst_n) begin
-    if (rst_n) acc <= '0;
+    if (!rst_n) acc <= '0;
     else acc <= acc_next;
   end
 

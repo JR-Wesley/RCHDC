@@ -1,3 +1,22 @@
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Shanghai, China
+// Engineer: Hanyu Zhang
+// Revision:
+//          2024/11/07 created
+// function:
+//           encode input data
+// parameter:
+//           CNT_W: max counter width
+// input:
+//           cnt: the number of input feature
+//           data: input data
+// output:
+//           enc: encoded data
+// design:
+// timing:
+//          Add `cnt` data together, output after `cnt` cycles.
+//////////////////////////////////////////////////////////////////////////////////
+
 `include "define.sv"
 
 module encoder #(
@@ -43,13 +62,13 @@ module encoder #(
       );
 
       // count the 1's in each bit's sum.
-      logic [$clog2(CNT_W) - 1 : 0] im_bit_pc;
-      popcount #(
-          .DW(CNT_W)
-      ) cnt (
-          .data(im_bit_nb),
-          .pc  (im_bit_pc)
-      );
+      //      logic [$clog2(CNT_W) - 1 : 0] im_bit_pc;
+      //      popcount #(
+      //          .DW(CNT_W)
+      // ) cnt (
+      // .data(im_bit_nb),
+      // .pc  (im_bit_pc)
+      // );
 
       // if the MSB is 1, the bit is set to 1; else to 0.
       dffen #(
@@ -57,7 +76,8 @@ module encoder #(
       ) cntff (
           .clk (clk),
           .en  (done),
-          .data(im_bit_pc[$clog2(CNT_W)-1]),
+          .data(im_bit_nb[$clog2(CNT_W)-1]),
+          // .data(im_bit_pc[$clog2(CNT_W)-1]),
           .qout(enc[d])
       );
     end

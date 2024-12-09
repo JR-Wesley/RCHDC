@@ -32,9 +32,9 @@ module rchdc (
     output logic [`CLS_DW - 1 : 0] predict
 );
   logic clear;
-  assign clear = 0;
-  //==================== For training or predicting, encode one sample ====================
+  assign clear = '0;
 
+  //==================== For training or predicting, encode one sample ====================
   logic [`SMP_DW - 1 : 0] smp_cnt;
   logic [`DIM - 1 : 0] smp_enc;
   logic smp_done;
@@ -85,7 +85,7 @@ module rchdc (
   // Check similarity
   generate
     for (genvar l = 0; l < 2; l++) begin : g_class
-      logic [$clog2(`DIM) - 1 : 0] cls_simi;
+      logic [$clog2(`DIM) - 2 : 0] cls_simi;
       similarity simi (
           .clk (clk),
           .a   (AM[l]),

@@ -22,7 +22,7 @@ module popcount #(
     input wire [DW - 1 : 0] data,
     output logic [$clog2(DW) - 1 : 0] pc
 );
-  // TODO: count the pop
+  // TODO: count the pop, or maybe not used
   assign pc = |data;
 
 endmodule

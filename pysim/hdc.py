@@ -68,7 +68,7 @@ def num2tensor(num, datawidth):
     return torch.tensor([((num >> 1) & 1) for i in range(datawidth - 1, -1, -1)],
                         dtype=torch.uint8)
 
-def binStr2tensor(binStr, datawidth):
+def binStr2tensor(binStr, datawidth, prefix = True):
     """
     Function
     ===
@@ -86,8 +86,13 @@ def binStr2tensor(binStr, datawidth):
     ---
     0b0101 -> [0, 1, 0, 1]
     """
-    # 去除二进制字符串的前缀'0b'
-    binary_str = binStr[2:]
+    # 是否去除二进制字符串的前缀'0b'
+    if prefix:
+        binary_str = binStr[2:]
+    else:
+        binary_str = binStr
+        pass
+
     # 将字符串转换为整数列表
     bin_list = [int(bit) for bit in binary_str]
     if len(bin_list) < datawidth:

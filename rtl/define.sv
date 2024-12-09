@@ -17,12 +17,15 @@
 `define PREDICT 1'b1
 
 //      the        size     of one     sample and     its  data width
+// NOTE: for simulation
 //      `define    SMP_SIZE 28 *       28
 `define SMP_SIZE 3
 `define SMP_DW $clog2(`SMP_SIZE)
 
 //      the        number   of the     train  samples and  its  data width
-`define SET_SIZE 256
+// NOTE: for simulation
+// `define SET_SIZE 256
+`define SET_SIZE 2
 `define SET_DW $clog2(`SET_SIZE)
 
 //      the        number   of classes and    its     data width
