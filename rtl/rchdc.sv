@@ -1,137 +1,106 @@
 //////////////////////////////////////////////////////////////////////////////////
-// Company: EDA Lab, Shanghai, China
+// Company: Shanghai, China
 // Engineer: Hanyu Zhang
 // Revision:
 //          2024/11/07 created
 // function:
-//              
+//           \sum im_pos * im_value
 // parameter:
-//          
-// input: 
-//          
+//           DIM:
+// input:
+//           feature
 // output:
-//          
+//           predict
 // design:
-//          
+//          two encoding:
 // timing:
-//          
+//          train:
+//          predict:
 //////////////////////////////////////////////////////////////////////////////////
 
+
+`include "define.sv"
+
 module rchdc (
-    input wire clk, rst_n,
-    input wire [`DIM - 1 : 0] im_value,
-    input wire [`DIM - 1 : 0] im_pos,
-    input wire state,
-    input wire [`CLS_DW - 1 : 0] label,
+    input  wire                    clk,
+    input  wire                    rst_n,
+    input  wire  [  `DIM  - 1 : 0] im_value,
+    input  wire  [  `DIM  - 1 : 0] im_pos,
+    input  wire                    smp_en,
+    input  wire                    state,
+    input  wire  [`CLS_DW - 1 : 0] label,
     output logic [`CLS_DW - 1 : 0] predict
 );
+  logic clear;
+  assign clear = 0;
+  //==================== For training or predicting, encode one sample ====================
 
-//==================== Encode one sample ====================
-    // samples in
-    logic smp_in, smp_done;
+  logic [`SMP_DW - 1 : 0] smp_cnt;
+  logic [`DIM - 1 : 0] smp_enc;
+  logic smp_done;
+  assign smp_cnt = `SMP_SIZE;
 
-    CounterMax #(
-        .DW (`SMP_DW   )
-    ) elemCnt (
-        .clk    (clk        ),
-        .rst_n  (rst_n      ),
-        .en     (smp_in    ),
-        .max    (`SMP_SIZE      ),
-        .cnt    (           ),
-        .co     (smp_done  )
-    );
-    
-    logic [`DIM - 1 : 0] am_sample;
-    generate
-        for (genvar d = 0; d < `DIM; d++) begin : sample
-            logic [`SMP_DW - 1 : 0] im_bit_nb;
+  encoder #(
+      .CNT_W(`SMP_DW)
+  ) spatio_enc (
+      .clk  (clk),
+      .rst_n(rst_n),
+      .en   (smp_en),
+      .clear(clear),
+      .cnt  (smp_cnt),
+      .data (im_value ^ im_pos),
+      .enc  (smp_enc),
+      .done (smp_done)
+  );
 
-            // bind operation using XOR ^
-            // accumulate each element in a sample
-            accum #(
-                .DW     (`SMP_DW    ) 
-            ) bitAcc (
-                .clk    (clk        ),
-                .rst_n  (rst_n      ),
-                .clr    (clear      ),
-                .en     (smp_in     ),
-                .data   (im_value[d] ^ im_pos[d]     ),
-                .acc    (im_bit_nb  )
-            );
+  //==================== For training, sum up all the samples ====================
+  logic set_en;
+  logic [`SET_DW - 1 : 0] set_cnt;
+  logic [`DIM - 1 : 0] set_enc;
+  logic set_done;
+  assign set_en  = smp_done;
+  assign set_cnt = `SET_SIZE;
 
-            // count the 1's in each bit's sum.
-            logic [$clog2(`SMP_DW) - 1 : 0] im_bit_pc;
-            popcount #(
-                .DW     (`SMP_DW   )
-            ) cnt (
-                .data   (im_bit_nb  ),
-                .pc     (im_bit_pc  )
-            );
+  encoder #(
+      .CNT_W(`SET_DW)
+  ) tempo_enc (
+      .clk  (clk),
+      .rst_n(rst_n),
+      .en   (set_en),
+      .clear(clear),
+      .cnt  (set_cnt),
+      .data (smp_enc),
+      .enc  (set_enc),
+      .done (set_done)
+  );
 
-            // if the MSB is 1, the bit is set to 1; else to 0.
-            dffen #(
-                .DW     (1              )
-            ) cntff (
-                .clk    (clk            ),
-                .en     (smp_done       ),
-                .data   (im_bit_pc[$clog2(`SMP_DW) - 1]   ),
-                .qout   (am_sample[d]   )
-            );
-        end
-    endgenerate
+  // update the AM
+  logic [`DIM - 1 : 0] AM[`CLS_NUM];
 
-//==================== For training, sum up all the samples ====================
-    logic train_done;
-    CounterMax #(
-        .DW     (`SMP_NUM_DW)
-    ) smpCnt (
-        .clk    (clk        ),
-        .rst_n  (rst_n      ),
-        .en     (smp_done   ),
-        .max    (`SMP_NUM   ),
-        .cnt    (           ),
-        .co     (train_done )
-    );
-    
-    logic [`SMP_NUM_DW - 1 : 0] sample_sum;
-    accum #(
-        .DW     (`SMP_NUM_DW) 
-    ) sampleAcc (
-        .clk    (clk        ),
-        .rst_n  (rst_n      ),
-        .clr    (clear      ),
-        .en     (smp_in     ),
-        .data   (am_sample  ),
-        .acc    (sample_sum )
-    );
+  always_ff @(posedge clk) begin
+    if (set_done) AM[label] <= set_enc;
+  end
 
-// update the AM
-    logic [`DIM - 1 : 0] AM [`CLS_NUM - 1 : 0];
-
-    always_ff@(posedge clk) begin
-        if(train_done) AM[label] <= am_sample;
+  //==================== For interfering, query the AM ====================
+  // Check similarity
+  generate
+    for (genvar l = 0; l < 2; l++) begin : g_class
+      logic [$clog2(`DIM) - 1 : 0] cls_simi;
+      similarity simi (
+          .clk (clk),
+          .a   (AM[l]),
+          .b   (set_enc),
+          .simi(cls_simi)
+      );
     end
+  endgenerate
 
-//==================== For interfering, query the AM ====================
-    // Check similarity
-    generate
-        for (genvar l = 0; l < `CLS_NUM; l++) begin : simi_cls
-            logic [$clog2(`DIM) - 1 : 0] cls_simi;
-            similarity simi(
-                .clk    (clk        ),
-                .rst_n  (rst_n      ),
-                .a      (AM[l]      ),
-                .b      (am_sample  ),
-                .simi   (cls_simi   )
-            );            
-        end
-    endgenerate
+  // TODO: find the max class
+  logic [`CLS_DW - 1 : 0] cls_mimi;
+  assign cls_mimi = (state != `PREDICT)? 0 :
+    (g_class[0].cls_simi > g_class[1].cls_simi) ? 4'd0 : 4'd1;
 
-    // find the maximum class
-    logic [`CLS_DW : 0] cls_mimi;
-    assign cls_mimi = (simi_cls[0].cls_simi > simi_cls[1].cls_simi ) ? 
-                simi_cls[0].cls_simi : simi_cls[1].cls_simi;
-
-    assign predict = cls_mimi;
+  assign predict = cls_mimi;
 
 endmodule
+
