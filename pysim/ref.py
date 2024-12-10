@@ -22,11 +22,13 @@ def handle_dut(dut):
 
         print(attrs, ": ", getattr(cur, 'value'))
 
+    def get_sample():
+        pass
+
     return printSig
 
 
 class ref:
-
     def __init__(self, param):
         # im_feat = hdc.item_memory(dim=DIM, number=SMP_SIZE, datatype='binary')
         # im_pos = hdc.item_memory(dim=DIM, number=SMP_SIZE, datatype='binary')

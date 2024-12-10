@@ -31,8 +31,8 @@ VL_ATTR_COLD void Vtop___024root___eval_initial__TOP(Vtop___024root* vlSelf) {
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vtop___024root___eval_initial__TOP\n"); );
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.rchdc__DOT__smp_cnt = 4U;
-    vlSelfRef.rchdc__DOT__set_cnt = 4U;
+    vlSelfRef.rchdc__DOT__smp_cnt = 6U;
+    vlSelfRef.rchdc__DOT__set_cnt = 6U;
 }
 
 VL_ATTR_COLD void Vtop___024root___eval_final(Vtop___024root* vlSelf) {
