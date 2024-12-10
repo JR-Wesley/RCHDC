@@ -16,20 +16,22 @@
 // timing:
 //          Add `cnt` data together, output after `cnt` cycles.
 //////////////////////////////////////////////////////////////////////////////////
+`ifndef __ENCODER_SV__
+`define __ENCODER_SV__
 
 `include "define.sv"
 
 module encoder #(
     parameter CNT_W = 8
 ) (
-    input wire clk,
-    input wire rst_n,
-    input wire en,
-    input wire clear,
-    input wire [CNT_W - 1 : 0] cnt,
-    input wire [`DIM - 1 : 0] data,
-    output logic [`DIM - 1 : 0] enc,
-    output logic done
+    input  wire                  clk,
+    input  wire                  rst_n,
+    input  wire                  en,
+    input  wire                  clear,
+    input  wire  [CNT_W - 1 : 0] cnt,
+    input  wire  [ `DIM - 1 : 0] data,
+    output logic [ `DIM - 1 : 0] enc,
+    output logic                 done
 );
 
   // samples counter
@@ -48,6 +50,7 @@ module encoder #(
     for (genvar d = 0; d < `DIM; d++) begin : g_sample
       logic [CNT_W - 1 : 0] im_bit_nb;
 
+      // TODO: transformation from {-1, 1} to {0, 1}
       // bind operation using XOR ^
       // accumulate each element in a sample
       inc #(
@@ -71,17 +74,20 @@ module encoder #(
       // );
 
       // if the MSB is 1, the bit is set to 1; else to 0.
-      dffen #(
-          .DW(1)
-      ) cntff (
-          .clk (clk),
-          .en  (done),
-          .data(im_bit_nb[$clog2(CNT_W)-1]),
-          // .data(im_bit_pc[$clog2(CNT_W)-1]),
-          .qout(enc[d])
-      );
+      // dffen #(
+      //     .DW(1)
+      // ) ffEnc (
+      //     .clk (clk),
+      //     .en  (done),
+      //     .data(im_bit_nb[CNT_W-1]),
+      //     // .data(im_bit_pc[$clog2(CNT_W)-1]),
+      //     .qout(enc[d])
+      // );
+      assign enc[d] = im_bit_nb[CNT_W-1];
     end
   endgenerate
 
 endmodule
+
+`endif
 

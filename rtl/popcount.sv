@@ -15,14 +15,19 @@
 //          XOR all the bits
 // timing:
 //////////////////////////////////////////////////////////////////////////////////
+`ifndef __POPCOUNT_SV__
+`define __POPCOUNT_SV__
 
 module popcount #(
     parameter DW = 8
 ) (
-    input wire [DW - 1 : 0] data,
+    input  wire  [        DW - 1 : 0] data,
     output logic [$clog2(DW) - 1 : 0] pc
 );
   // TODO: count the pop, or maybe not used
   assign pc = |data;
 
 endmodule
+
+`endif
+

@@ -17,13 +17,16 @@
 //          train:
 //          predict:
 //////////////////////////////////////////////////////////////////////////////////
-
+`ifndef __RCHDC_SV__
+`define __RCHDC_SV__
 
 `include "define.sv"
 
 module rchdc (
     input  wire                    clk,
     input  wire                    rst_n,
+    input  wire                    smp_clr,
+    input  wire                    set_clr,
     input  wire  [  `DIM  - 1 : 0] im_value,
     input  wire  [  `DIM  - 1 : 0] im_pos,
     input  wire                    smp_en,
@@ -31,14 +34,14 @@ module rchdc (
     input  wire  [`CLS_DW - 1 : 0] label,
     output logic [`CLS_DW - 1 : 0] predict
 );
-  logic clear;
-  assign clear = '0;
 
   //==================== For training or predicting, encode one sample ====================
   logic [`SMP_DW - 1 : 0] smp_cnt;
   logic [`DIM - 1 : 0] smp_enc;
   logic smp_done;
-  assign smp_cnt = `SMP_SIZE;
+  /* verilator lint_off WIDTHTRUNC */
+  assign smp_cnt = `SMP_SIZE - 1;
+  /* verilator lint_on WIDTHTRUNC */
 
   encoder #(
       .CNT_W(`SMP_DW)
@@ -46,7 +49,7 @@ module rchdc (
       .clk  (clk),
       .rst_n(rst_n),
       .en   (smp_en),
-      .clear(clear),
+      .clear(smp_clr),
       .cnt  (smp_cnt),
       .data (im_value ^ im_pos),
       .enc  (smp_enc),
@@ -55,11 +58,18 @@ module rchdc (
 
   //==================== For training, sum up all the samples ====================
   logic set_en;
+  logic set_done;
   logic [`SET_DW - 1 : 0] set_cnt;
   logic [`DIM - 1 : 0] set_enc;
-  logic set_done;
-  assign set_en  = smp_done;
-  assign set_cnt = `SET_SIZE;
+
+  always_ff @(posedge clk) begin : wr_set_en
+    if (smp_done) set_en <= '1;
+    else set_en <= '0;
+  end
+
+  /* verilator lint_off WIDTHTRUNC */
+  assign set_cnt = `SET_SIZE - 1;
+  /* verilator lint_on WIDTHTRUNC */
 
   encoder #(
       .CNT_W(`SET_DW)
@@ -67,25 +77,32 @@ module rchdc (
       .clk  (clk),
       .rst_n(rst_n),
       .en   (set_en),
-      .clear(clear),
+      .clear(set_clr),
       .cnt  (set_cnt),
       .data (smp_enc),
       .enc  (set_enc),
       .done (set_done)
   );
 
-  // update the AM
+  //==================== AM ====================
   logic [`DIM - 1 : 0] AM[`CLS_NUM];
+  logic am_wr;
 
-  always_ff @(posedge clk) begin
-    if (set_done) AM[label] <= set_enc;
+  always_ff @(posedge clk) begin : wr_am_en
+    if (set_done) am_wr <= '1;
+    else am_wr <= '0;
+  end
+
+  // update the AM
+  always_ff @(posedge clk) begin : updateAM
+    if (am_wr) AM[label] <= set_enc;
   end
 
   //==================== For interfering, query the AM ====================
   // Check similarity
   generate
     for (genvar l = 0; l < 2; l++) begin : g_class
-      logic [$clog2(`DIM) - 2 : 0] cls_simi;
+      logic [$clog2(`DIM) : 0] cls_simi;
       similarity simi (
           .clk (clk),
           .a   (AM[l]),
@@ -103,4 +120,6 @@ module rchdc (
   assign predict = cls_mimi;
 
 endmodule
+
+`endif
 

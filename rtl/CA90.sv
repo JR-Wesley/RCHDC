@@ -20,10 +20,9 @@ module CA90 (
   // TODO: CA90 rules for random generating
   logic [`DIM - 1 : 0] vec_left, vec_right;
 
-
-  assign vec_left  = {vec[`DIM-2 : 0], vec[`DIM-1]};
+  assign vec_left = {vec[`DIM-2 : 0], vec[`DIM-1]};
   assign vec_right = {vec[0], vec[`DIM-1 : 1]};
 
-  assign vec_next  = vec_left ^ vec_right;
+  assign vec_next = vec_left ^ vec_right;
 
 endmodule
