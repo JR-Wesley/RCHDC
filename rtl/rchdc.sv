@@ -34,7 +34,6 @@ module rchdc (
     input  wire  [`CLS_DW - 1 : 0] label,
     output logic [`CLS_DW - 1 : 0] predict
 );
-
   //==================== For training or predicting, encode one sample ====================
   logic [`SMP_DW - 1 : 0] smp_cnt;
   logic [`DIM - 1 : 0] smp_enc;
@@ -83,7 +82,6 @@ module rchdc (
       .enc  (set_enc),
       .done (set_done)
   );
-
   //==================== AM ====================
   logic [`DIM - 1 : 0] AM[`CLS_NUM];
   logic am_wr;

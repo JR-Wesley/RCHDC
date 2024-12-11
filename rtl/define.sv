@@ -11,7 +11,7 @@
 `define __DEFINE_SV__
 
 // NOTE: for simulation
-`define DIM 16 //1024
+`define DIM 16
 
 //      state      definition
 `define TRAIN 1'b0
@@ -19,14 +19,12 @@
 
 //      the        size     of one     sample and     its  data width
 // NOTE: for simulation
-//      `define    SMP_SIZE 28 *       28
-`define SMP_SIZE 7
+`define SMP_SIZE 15
 `define SMP_DW $clog2(`SMP_SIZE + 1)
 
 //      the        number   of the     train  samples and  its  data width
 // NOTE: for simulation
-// `define SET_SIZE 256
-`define SET_SIZE 7
+`define SET_SIZE 15
 `define SET_DW $clog2(`SET_SIZE + 1)
 
 //      the        number   of classes and    its     data width

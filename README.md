@@ -33,3 +33,6 @@
 
 iverilog 编译 single element array 时报错，<a href="https://github.com/steveicarus/iverilog/pull/1115">issue</a> 此 PR 还未更新至 release，需要更新最新代码。
 
+# log
+counter_timing.vcd:两次编码的计数器时序。
+

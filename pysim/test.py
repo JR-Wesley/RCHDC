@@ -19,14 +19,14 @@ def test_my_design_runner():
 
     # compiler arguments
     wave_en = True
-    compiler = 0
-    if compiler == 0:
-        sim = os.getenv("SIM", "verilator")
-        # include "define.sv"
-        build_args = ['-I' + str(proj_path / "rtl")]
-        build_dir = str(proj_path / "sim/build_verilator")
-        log_file = str(proj_path / "sim/run_verilator.log")
-    elif compiler == 1:
+    sim = os.getenv("SIM", "verilator")
+    # include "define.sv"
+    build_args = ['-I' + str(proj_path / "rtl")]
+    build_dir = str(proj_path / "sim/build_verilator")
+    log_file = str(proj_path / "sim/run_verilator.log")
+
+    compiler = 'v'
+    if compiler == 'i':
         sim = os.getenv("SIM", "icarus")
         build_args = ['-g2005-sv', '-I', str(proj_path / "rtl")]
         build_dir = str(proj_path / "sim/build_icarus")
