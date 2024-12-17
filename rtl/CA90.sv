@@ -7,15 +7,15 @@
 // Revision 0.01 - File Created
 //////////////////////////////////////////////////////////////////////////////////
 
-`include "define.sv"
+`include "Define.sv"
 
 module CA90 (
-    //   input wire clk,
-    //  input wire en,
-    // 1 left, 0 right
-    //    input wire l_or_r,
-    input  wire  [`DIM - 1 : 0] vec,
-    output logic [`DIM - 1 : 0] vec_next
+  //   input wire clk,
+  //  input wire en,
+  // 1 left, 0 right
+  //    input wire l_or_r,
+  input  wire  [`DIM - 1 : 0] vec,
+  output logic [`DIM - 1 : 0] vec_next
 );
   // TODO: CA90 rules for random generating
   logic [`DIM - 1 : 0] vec_left, vec_right;

@@ -17,24 +17,25 @@
 `ifndef __INC_SV__
 `define __INC_SV__
 
-module inc #(
-    parameter DW = 8
+module Inc #(
+    parameter integer DW = 8
 ) (
-    input  wire               clk,
-    input  wire               rst_n,
-    input  wire               clr,
-    input  wire               en,
-    input  wire               one_bit,
-    output logic [DW - 1 : 0] acc
+  input  wire               clk,
+  input  wire               rst_n,
+  input  wire               clr,
+  input  wire               en,
+  input  wire               one_bit,
+  output logic [DW - 1 : 0] acc
 );
   logic [DW - 1 : 0] acc_next;
   /* verilator lint_off WIDTHEXPAND */
-  assign acc_next = clr ? '0 : en ? (acc + one_bit) : acc;
+  assign acc_next = acc + one_bit;
   /* verilator lint_on WIDTHEXPAND */
 
   always_ff @(posedge clk, negedge rst_n) begin
     if (!rst_n) acc <= '0;
-    else acc <= acc_next;
+    else if (clr) acc <= '0;
+    else if (en) acc <= acc_next;
   end
 
 endmodule

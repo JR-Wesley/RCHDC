@@ -12,12 +12,12 @@
 `ifndef __DFF_SV__
 `define __DFF_SV__
 
-module dff #(
-    parameter DW = 32
+module Dff #(
+    parameter integer DW = 32
 ) (
-    input  wire               clk,
-    input  wire  [DW - 1 : 0] data,
-    output logic [DW - 1 : 0] qout
+  input  wire               clk,
+  input  wire  [DW - 1 : 0] data,
+  output logic [DW - 1 : 0] qout
 );
 
   always_ff @(posedge clk) begin : dff

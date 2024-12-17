@@ -19,19 +19,22 @@
 `ifndef __ENCODER_SV__
 `define __ENCODER_SV__
 
-`include "define.sv"
+`include "Define.sv"
+`include "./cnt/CounterMax.sv"
+`include "./cnt/Inc.sv"
 
-module encoder #(
-    parameter CNT_W = 8
+module Encoder #(
+    parameter integer CNT_W = 8
 ) (
-    input  wire                  clk,
-    input  wire                  rst_n,
-    input  wire                  en,
-    input  wire                  clear,
-    input  wire  [CNT_W - 1 : 0] cnt,
-    input  wire  [ `DIM - 1 : 0] data,
-    output logic [ `DIM - 1 : 0] enc,
-    output logic                 done
+  input  wire                  clk,
+  input  wire                  rst_n,
+  input  wire                  clr,
+  input  wire                  en,
+  input  wire  [CNT_W - 1 : 0] cnt,
+  input  wire  [ `DIM - 1 : 0] data,
+  input  wire  [CNT_W - 1 : 0] thre,
+  output logic [ `DIM - 1 : 0] enc,
+  output logic                 done
 );
 
   // samples counter
@@ -53,12 +56,12 @@ module encoder #(
       // TODO: transformation from {-1, 1} to {0, 1}
       // bind operation using XOR ^
       // accumulate each element in a sample
-      inc #(
+      Inc #(
           .DW(CNT_W)
       ) bitAcc (
           .clk    (clk),
           .rst_n  (rst_n),
-          .clr    (clear),
+          .clr    (clr),
           .en     (en),
           .one_bit(data[d]),
           .acc    (im_bit_nb)
@@ -83,7 +86,8 @@ module encoder #(
       //     // .data(im_bit_pc[$clog2(CNT_W)-1]),
       //     .qout(enc[d])
       // );
-      assign enc[d] = im_bit_nb[CNT_W-1];
+      assign enc[d] = (im_bit_nb > thre) ? 1'b1 : 1'b0;
+      // assign enc[d] = im_bit_nb[CNT_W-1];
     end
   endgenerate
 

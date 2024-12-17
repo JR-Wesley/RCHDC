@@ -14,7 +14,7 @@ def test_my_design_runner():
     sources = glob.glob(str(proj_path / "rtl/*.sv"))
     sources += glob.glob(str(proj_path / "rtl/dff/*.sv"))
     sources += glob.glob(str(proj_path / "rtl/cnt/*.sv"))
-    hdl_top = "rchdc"
+    hdl_top = "Rchdc"
     test_module = "testbench,"
 
     # compiler arguments
@@ -25,7 +25,7 @@ def test_my_design_runner():
     build_dir = str(proj_path / "sim/build_verilator")
     log_file = str(proj_path / "sim/run_verilator.log")
 
-    compiler = 'v'
+    compiler = 'i'
     if compiler == 'i':
         sim = os.getenv("SIM", "icarus")
         build_args = ['-g2005-sv', '-I', str(proj_path / "rtl")]

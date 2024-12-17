@@ -16,7 +16,7 @@ async def testbench(dut):
 
     pr = ref.handle_dut(dut)
     con = Console()
-    define_file_path = "../../rtl/define.sv"
+    define_file_path = "../../rtl/Define.sv"
     ref_mnist = ref.ref_model(define_file_path)
 
     # NOTE: check the modules under `dut`

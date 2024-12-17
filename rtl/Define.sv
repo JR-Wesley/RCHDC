@@ -29,7 +29,7 @@
 
 //      the        number   of classes and    its     data width
 // NOTE: for simulation
-`define CLS_NUM 10
+`define CLS_NUM 16
 `define CLS_DW $clog2(`CLS_NUM)
 
 `endif
