@@ -2,20 +2,22 @@
 `define __COUNTER_MAX_SV__
 
 module CounterMax #(
-    parameter integer DW = 8
+    parameter int  DW   = 100,
+    parameter type dw_t = logic [DW - 1 : 0]
 ) (
-  input  wire               clk,
-  input  wire               rst_n,
-  input  wire               en,
-  input  wire  [DW - 1 : 0] max,
-  output logic [DW - 1 : 0] cnt,
-  output logic              co
+  input  logic clk,
+  input  logic rst_n,
+  input  logic en,
+  input  dw_t  max,
+  output dw_t  cnt,
+  output logic co
 );
 
-  assign co = en & (cnt == max);
-
-  logic [DW - 1 : 0] cnt_inc;
-  assign cnt_inc = (cnt < max) ? cnt + 1'b1 : '0;
+  dw_t cnt_inc;
+  always_comb begin
+    cnt_inc = (cnt < max) ? cnt + 1'b1 : '0;
+    co = en & (cnt == max);
+  end
 
   always_ff @(posedge clk, negedge rst_n) begin
     if (!rst_n) cnt <= '0;

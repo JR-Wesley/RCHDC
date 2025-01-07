@@ -17,21 +17,25 @@
 `include "Define.sv"
 
 module Compare #(
-    parameter integer DW   = 32,
-    parameter integer CLSW = 16
+    parameter int  DW     = 32,
+    parameter int  CLSW   = 16,
+    parameter type dw_t   = logic [  DW - 1 : 0],
+    parameter type clsw_t = logic [CLSW - 1 : 0]
 ) (
-  input  wire  [  DW - 1 : 0] a,
-  input  wire  [CLSW - 1 : 0] numa,
-  input  wire  [  DW - 1 : 0] b,
-  input  wire  [CLSW - 1 : 0] numb,
-  output logic [  DW - 1 : 0] max,
-  output logic [CLSW - 1 : 0] numMax
+  input  dw_t   a,
+  input  clsw_t numa,
+  input  dw_t   b,
+  input  clsw_t numb,
+  output dw_t   max,
+  output clsw_t numMax
 );
 
   logic res;
-  assign res = (a < b);
-  assign max = res ? a : b;
-  assign numMax = res ? numa : numb;
+  always_comb begin
+    res = (a < b);
+    max = res ? a : b;
+    numMax = res ? numa : numb;
+  end
 
 endmodule
 

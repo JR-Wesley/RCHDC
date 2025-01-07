@@ -2,25 +2,21 @@
 `define __ACCUMULATOR_SV__
 
 module Accumulator #(
-    parameter integer DW = 8
+    parameter int  DW   = 8,
+    parameter type dw_t = logic [DW - 1 : 0]
 ) (
-  input  wire               clk,
-  input  wire               rst_n,
-  input  wire               clr,
-  input  wire               en,
-  input  wire  [DW - 1 : 0] d,
-  output logic [DW - 1 : 0] acc
+  input  logic clk,
+  input  logic rst_n,
+  input  logic en,
+  input  dw_t  d,
+  output dw_t  acc
 );
 
-  logic [DW - 1 : 0] acc_next;
-  assign acc_next = acc + d;
+  dw_t acc_next;
+  always_comb acc_next = acc + d;
 
-  // priority:
-  // clr: set to zero
-  // en: enable register or hold
   always_ff @(posedge clk, negedge rst_n) begin
     if (!rst_n) acc <= '0;
-    else if (clr) acc <= '0;
     else if (en) acc <= acc_next;
   end
 

@@ -57,7 +57,7 @@ def quant(hv, thre, datatype='binary'):
         raise ValueError('Sorry, currently only supporting bipolar datatype.')
 
 
-def num2tensor(num, datawidth):
+def num2tensor(num, datawidth) -> torch.Tensor:
     """
     Function
     ===
@@ -71,7 +71,7 @@ def num2tensor(num, datawidth):
                         dtype=torch.uint8)
 
 
-def binStr2tensor(binStr, datawidth, prefix=True):
+def binStr2tensor(binStr: str, datawidth, prefix=True) -> torch.Tensor:
     """
     Function
     ===
@@ -106,7 +106,7 @@ def binStr2tensor(binStr, datawidth, prefix=True):
     return torch.tensor(bin_list[::-1], dtype=torch.uint8)
 
 
-def tensor2binStr(tensor):
+def tensor2binStr(tensor: torch.Tensor) -> str:
     """
     Function
     ===

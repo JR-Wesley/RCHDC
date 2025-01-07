@@ -26,74 +26,67 @@
 `include "./FindMin.sv"
 
 module Rchdc (
-  input  wire                    clk,
-  input  wire                    rst_n,
-  input  wire                    set_clr,
-  input  wire                    smp_clr,
-  input  wire                    smp_en,
-  input  wire  [  `DIM  - 1 : 0] im_value,
-  input  wire  [  `DIM  - 1 : 0] im_pos,
-  input  wire                    state,
-  input  wire  [`CLS_DW - 1 : 0] label,
-  output logic [`CLS_DW - 1 : 0] predict
+  input  logic  clk,
+  input  logic  rst_n,
+  input  logic  set_clr,
+  input  logic  smp_clr,
+  input  logic  smp_en,
+  input  dw_t   im_value,
+  input  dw_t   im_pos,
+  input  logic  state,
+  input  clsw_t label,
+  output clsw_t predict
 );
+
   //==================== For training or predicting, encode one sample ====================
-  logic [`SMP_DW - 1 : 0] smp_cnt;
-  logic [`SMP_DW - 1 : 0] smp_thre;
+  smpw_t smp_cnt, smp_thre;
   assign smp_thre = `SMP_DW'(`SMP_SIZE >> 1);
-  logic [`DIM - 1 : 0] smp_enc;
+  dw_t smp_enc;
   assign smp_cnt = `SMP_DW'(`SMP_SIZE - 1);
   logic smp_done;
 
   Encoder #(
       .CNT_W(`SMP_DW)
   ) spatio_enc (
-      .clk  (clk),
-      .rst_n(rst_n),
-      .en   (smp_en),
-      .clr  (smp_clr),
-      .cnt  (smp_cnt),
-      .data (im_value ^ im_pos),
-      .thre (smp_thre),
-      .enc  (smp_enc),
-      .done (smp_done)
+    .*,
+    .en  (smp_en),
+    .clr (smp_clr),
+    .cnt (smp_cnt),
+    .data(im_value ^ im_pos),
+    .thre(smp_thre),
+    .enc (smp_enc),
+    .done(smp_done)
   );
 
   //==================== For training, sum up all the samples ====================
   logic set_en;
-  logic [`SET_DW - 1 : 0] set_cnt;
-  logic [`SET_DW - 1 : 0] set_thre;
+  `FFARN(set_en, smp_done, clk, rst_n);
+
+  setw_t set_cnt, set_thre;
+  // TODO: popcount threshold.
   assign set_thre = `SET_DW'(`SET_SIZE >> 1);
-  logic [`DIM - 1 : 0] set_enc;
+  dw_t set_enc;
   assign set_cnt = `SET_DW'(`SET_SIZE - 1);
+
   logic set_done;
-
-  always_ff @(posedge clk) begin : wr_set_en
-    if (smp_done) set_en <= '1;
-    else set_en <= '0;
-  end
-
   Encoder #(
       .CNT_W(`SET_DW)
   ) tempo_enc (
-      .clk  (clk),
-      .rst_n(rst_n),
-      .en   (set_en),
-      .clr  (set_clr),
-      .cnt  (set_cnt),
-      .data (smp_enc),
-      .thre (set_thre),
-      .enc  (set_enc),
-      .done (set_done)
+    .*,
+    .en  (set_en),
+    .clr (set_clr),
+    .cnt (set_cnt),
+    .data(smp_enc),
+    .thre(set_thre),
+    .enc (set_enc),
+    .done(set_done)
   );
-  //==================== AM ====================
-  logic [`DIM - 1 : 0] AM[`CLS_NUM];
-  logic am_wr;
 
-  always_ff @(posedge clk) begin : wr_am_en
-    if (set_done) am_wr <= '1;
-    else am_wr <= '0;
-  end
+  //==================== AM ====================
+  dw_t AM[`CLS_NUM];
+
+  logic am_wr;
+  `FFARN(am_wr, set_done, clk, rst_n);
 
   // update the AM
   always_ff @(posedge clk) begin : updateAM
@@ -106,10 +99,10 @@ module Rchdc (
     // Check similarity
     for (genvar l = 0; l < `CLS_NUM; l++) begin : g_simi
       Similarity simi (
-          .clk (clk),
-          .a   (AM[l]),
-          .b   (set_enc),
-          .simi(cls_simi[l])
+        .*,
+        .a   (AM[l]),
+        .b   (set_enc),
+        .simi(cls_simi[l])
       );
     end
   endgenerate
@@ -117,9 +110,9 @@ module Rchdc (
   // TODO: find the min Hum
   logic [`CLS_DW - 1 : 0] cls_min;
   FindMin maxcls (
-      .clk     (clk),
-      .nums    (cls_simi),
-      .indexMin(cls_min)
+    .*,
+    .nums    (cls_simi),
+    .indexMin(cls_min)
   );
   // assign cls_max = (state != `PREDICT)? '0 :
   //   (cls_simi[0] > cls_simi[1]) ? `CLS_DW'('d0) :`CLS_DW'('d1)  ;

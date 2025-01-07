@@ -19,7 +19,6 @@
 `define __SIMILARITY_SV__
 
 `include "Define.sv"
-`include "./dff/Dff.sv"
 
 module Similarity (
   input  wire                   clk,
@@ -62,14 +61,7 @@ module Similarity (
   endgenerate
 
   // output
-  Dff #(
-      .DW(ADDERLEN + 1)
-  ) ff_simi (
-      .clk (clk),
-      // for Iverilog access [0] in array[0:0] raise error
-      .data(g_adder_stg[ADDERLEN-1].sum_s[0]),
-      .qout(simi)
-  );
+  `FFARN(simi, g_adder_stg[ADDERLEN-1].sum_s[0], clk, 1'b1);
 
 endmodule
 

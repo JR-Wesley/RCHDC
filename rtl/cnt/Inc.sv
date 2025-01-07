@@ -18,16 +18,17 @@
 `define __INC_SV__
 
 module Inc #(
-    parameter integer DW = 8
+    parameter int  DW   = 8,
+    parameter type dw_t = logic [DW - 1 : 0]
 ) (
-  input  wire               clk,
-  input  wire               rst_n,
-  input  wire               clr,
-  input  wire               en,
-  input  wire               one_bit,
-  output logic [DW - 1 : 0] acc
+  input  logic clk,
+  input  logic rst_n,
+  input  logic clr,
+  input  logic en,
+  input  logic one_bit,
+  output dw_t  acc
 );
-  logic [DW - 1 : 0] acc_next;
+  dw_t acc_next;
   /* verilator lint_off WIDTHEXPAND */
   assign acc_next = acc + one_bit;
   /* verilator lint_on WIDTHEXPAND */

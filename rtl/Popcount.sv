@@ -12,20 +12,24 @@
 // output:
 //          pc:the population count
 // design:
-//          XOR all the bits
 // timing:
 //////////////////////////////////////////////////////////////////////////////////
 `ifndef __POPCOUNT_SV__
 `define __POPCOUNT_SV__
 
-module popcount #(
-    parameter DW = 8
+module Popcount #(
+    parameter int DW = 32
 ) (
-    input  wire  [        DW - 1 : 0] data,
-    output logic [$clog2(DW) - 1 : 0] pc
+  input  logic [        DW - 1 : 0] data_i,
+  output logic [$clog2(DW) - 1 : 0] pc_o
 );
-  // TODO: count the pop, or maybe not used
-  assign pc = |data;
+
+  always_comb begin
+    pc_o = 0;
+    for (int i = 0; i < DW; i++) begin
+      pc_o += data_i[i];
+    end
+  end
 
 endmodule
 

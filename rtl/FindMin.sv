@@ -20,11 +20,11 @@
 
 `include "Define.sv"
 `include "./Compare.sv"
-`include "./dff/Dff.sv"
 
 module FindMin (
-  input  wire                     clk,
-  input  wire  [$clog2(`DIM) : 0] nums    [`CLS_NUM],
+  input  logic                    clk,
+  input  logic                    rst_n,
+  input  logic [$clog2(`DIM) : 0] nums    [`CLS_NUM],
   output logic [ `CLS_DW - 1 : 0] indexMin
 );
 
@@ -41,15 +41,15 @@ module FindMin (
       logic [`CLS_DW - 1 : 0] numMax[`CLS_NUM  >> (stg + 1)];
       for (genvar i = 0; i < (`CLS_NUM >> (stg + 1)); i++) begin : g_comp_div_half
         Compare #(
-            .DW($clog2(`DIM) + 1),
+            .DW  ($clog2(`DIM) + 1),
             .CLSW(`CLS_DW)
         ) stg_comp (
-            .a     (comp1[i]),
-            .numa  (num1[i]),
-            .b     (comp2[i]),
-            .numb  (num2[i]),
-            .max   (compMax[i]),
-            .numMax(numMax[i])
+          .a     (comp1[i]),
+          .numa  (num1[i]),
+          .b     (comp2[i]),
+          .numb  (num2[i]),
+          .max   (compMax[i]),
+          .numMax(numMax[i])
         );
       end
     end
@@ -78,14 +78,8 @@ module FindMin (
   endgenerate
 
   // output
-  Dff #(
-      .DW(`CLS_DW)
-  ) ff_max (
-      .clk (clk),
-      // for Iverilog access [0] in array[0:0] raise error
-      .data(g_comp_stg[COMLEN-1].numMax[0]),
-      .qout(indexMin)
-  );
+  //   // for Iverilog access [0] in array[0:0] raise error
+  `FFARN(indexMin, g_comp_stg[COMLEN-1].numMax[0], clk, rst_n);
 
 endmodule
 
