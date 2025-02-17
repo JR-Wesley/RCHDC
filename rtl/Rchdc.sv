@@ -28,11 +28,11 @@
 module Rchdc (
   input  logic  clk,
   input  logic  rst_n,
-  input  logic  set_clr,
   input  logic  smp_clr,
   input  logic  smp_en,
   input  dw_t   im_value,
   input  dw_t   im_pos,
+  input  logic  set_clr,
   input  logic  state,
   input  clsw_t label,
   output clsw_t predict
@@ -59,16 +59,16 @@ module Rchdc (
   );
 
   //==================== For training, sum up all the samples ====================
+  // when state is training
   logic set_en;
-  `FFARN(set_en, smp_done, clk, rst_n);
+  `FFARN(set_en, smp_done && (state == `TRAIN), clk, rst_n);
 
   setw_t set_cnt, set_thre;
-  // TODO: popcount threshold.
   assign set_thre = `SET_DW'(`SET_SIZE >> 1);
   dw_t set_enc;
   assign set_cnt = `SET_DW'(`SET_SIZE - 1);
-
   logic set_done;
+
   Encoder #(
       .CNT_W(`SET_DW)
   ) tempo_enc (
@@ -94,6 +94,7 @@ module Rchdc (
   end
 
   //==================== For interfering, query the AM ====================
+  // when state is predicting
   logic [$clog2(`DIM) : 0] cls_simi[`CLS_NUM];
   generate
     // Check similarity
@@ -101,7 +102,7 @@ module Rchdc (
       Similarity simi (
         .*,
         .a   (AM[l]),
-        .b   (set_enc),
+        .b   (smp_enc),
         .simi(cls_simi[l])
       );
     end
@@ -117,7 +118,7 @@ module Rchdc (
   // assign cls_max = (state != `PREDICT)? '0 :
   //   (cls_simi[0] > cls_simi[1]) ? `CLS_DW'('d0) :`CLS_DW'('d1)  ;
 
-  assign predict = (state != `PREDICT) ? cls_min : '0;
+  assign predict = (state == `PREDICT) ? cls_min : '0;
 
 endmodule
 

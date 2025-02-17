@@ -17,7 +17,7 @@ class ref_model:
             self.cfg.DIM, dtype=torch.uint8) for _ in range(2)]
         self.amem = torch.zeros(
             (self.cfg.CLS_NUM, self.cfg.DIM), dtype=torch.uint8)
-        self.label = 1
+        self.label = 2
 
     def train(self):
         set_size = self.cfg.SET_SIZE
