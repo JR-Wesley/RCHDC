@@ -10,7 +10,7 @@
 `ifndef __DEFINE_SV__
 `define __DEFINE_SV__
 
-// NOTE: for simulation
+// NOTE: parameters set for simulation
 `define DIM 16
 
 //      state      definition
@@ -18,17 +18,14 @@
 `define PREDICT 1'b1
 
 //      the        size     of one     sample and     its  data width
-// NOTE: for simulation
-`define SMP_SIZE 15
+`define SMP_SIZE 14
 `define SMP_DW $clog2(`SMP_SIZE + 1)
 
 //      the        number   of the     train  samples and  its  data width
-// NOTE: for simulation
-`define SET_SIZE 15
+`define SET_SIZE 14
 `define SET_DW $clog2(`SET_SIZE + 1)
 
 //      the        number   of classes and    its     data width
-// NOTE: for simulation
 `define CLS_NUM 16
 `define CLS_DW $clog2(`CLS_NUM)
 

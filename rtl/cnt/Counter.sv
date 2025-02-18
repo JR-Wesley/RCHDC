@@ -13,10 +13,12 @@ module Counter #(
 );
 
   dw_t cnt_inc;
+  /* verilator lint_off WIDTHEXPAND */
   always_comb begin
     cnt_inc = (cnt < M - 1) ? cnt + 1'b1 : '0;
     co = en & (cnt == M - 1);
   end
+  /* verilator lint_on WIDTHEXPAND */
 
   always_ff @(posedge clk, negedge rst_n) begin
     if (!rst_n) cnt <= '0;

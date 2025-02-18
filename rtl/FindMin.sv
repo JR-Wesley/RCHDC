@@ -24,6 +24,7 @@
 module FindMin (
   input  logic                    clk,
   input  logic                    rst_n,
+  input  logic                    en,
   input  logic [$clog2(`DIM) : 0] nums    [`CLS_NUM],
   output logic [ `CLS_DW - 1 : 0] indexMin
 );
@@ -79,7 +80,7 @@ module FindMin (
 
   // output
   //   // for Iverilog access [0] in array[0:0] raise error
-  `FFARN(indexMin, g_comp_stg[COMLEN-1].numMax[0], clk, rst_n);
+  `FFARNE(indexMin, g_comp_stg[COMLEN-1].numMax[0], en, clk, rst_n);
 
 endmodule
 

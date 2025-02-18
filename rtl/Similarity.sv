@@ -21,14 +21,16 @@
 `include "Define.sv"
 
 module Similarity (
-  input  wire                   clk,
-  input  wire  [  `DIM - 1 : 0] a,
-  input  wire  [  `DIM - 1 : 0] b,
+  input  logic                  clk,
+  input  logic                  rst_n,
+  input  logic                  en,
+  input  logic [  `DIM - 1 : 0] a,
+  input  logic [  `DIM - 1 : 0] b,
   output logic [$clog2(`DIM):0] simi
 );
   logic [`DIM - 1 : 0] xor_ab;
   assign xor_ab = a ^ b;
-  localparam integer ADDERLEN = $clog2(`DIM);
+  localparam int ADDERLEN = $clog2(`DIM);
 
   // main body of the adder tree
   generate
@@ -61,7 +63,7 @@ module Similarity (
   endgenerate
 
   // output
-  `FFARN(simi, g_adder_stg[ADDERLEN-1].sum_s[0], clk, 1'b1);
+  `FFARNE(simi, g_adder_stg[ADDERLEN-1].sum_s[0], en, clk, rst_n);
 
 endmodule
 

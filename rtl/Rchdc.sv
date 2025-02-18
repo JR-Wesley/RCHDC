@@ -4,7 +4,6 @@
 // Revision:
 //          2024/11/07 created
 // function:
-//           \sum im_pos * im_value
 // parameter:
 //           DIM:
 // input:
@@ -28,79 +27,73 @@
 module Rchdc (
   input  logic  clk,
   input  logic  rst_n,
+  input  logic  state,
   input  logic  smp_clr,
   input  logic  smp_en,
   input  dw_t   im_value,
   input  dw_t   im_pos,
-  input  logic  set_clr,
-  input  logic  state,
   input  clsw_t label,
+  input  logic  set_clr,
   output clsw_t predict
 );
 
   //==================== For training or predicting, encode one sample ====================
-  smpw_t smp_cnt, smp_thre;
-  assign smp_thre = `SMP_DW'(`SMP_SIZE >> 1);
   dw_t smp_enc;
-  assign smp_cnt = `SMP_DW'(`SMP_SIZE - 1);
   logic smp_done;
 
   Encoder #(
       .CNT_W(`SMP_DW)
   ) spatio_enc (
     .*,
-    .en  (smp_en),
     .clr (smp_clr),
-    .cnt (smp_cnt),
+    .en  (smp_en),
     .data(im_value ^ im_pos),
-    .thre(smp_thre),
-    .enc (smp_enc),
-    .done(smp_done)
-  );
-
-  //==================== For training, sum up all the samples ====================
-  // when state is training
-  logic set_en;
-  `FFARN(set_en, smp_done && (state == `TRAIN), clk, rst_n);
-
-  setw_t set_cnt, set_thre;
-  assign set_thre = `SET_DW'(`SET_SIZE >> 1);
-  dw_t set_enc;
-  assign set_cnt = `SET_DW'(`SET_SIZE - 1);
-  logic set_done;
-
-  Encoder #(
-      .CNT_W(`SET_DW)
-  ) tempo_enc (
-    .*,
-    .en  (set_en),
-    .clr (set_clr),
-    .cnt (set_cnt),
-    .data(smp_enc),
-    .thre(set_thre),
-    .enc (set_enc),
-    .done(set_done)
+    .enc (smp_enc)
   );
 
   //==================== AM ====================
   dw_t AM[`CLS_NUM];
 
-  logic am_wr;
-  `FFARN(am_wr, set_done, clk, rst_n);
+  //==================== For training, sum up all the samples ====================
+  generate
+    for (genvar l = 0; l < `CLS_NUM; l++) begin : g_class
+      logic set_en;
+      assign set_en = smp_clr && (state == `TRAIN) && (label == l);
+      // `FFARN(set_en, smp_clr && (state == `TRAIN) && (label == l), clk, rst_n);
 
-  // update the AM
-  always_ff @(posedge clk) begin : updateAM
-    if (am_wr) AM[label] <= set_enc;
-  end
+      dw_t set_enc;
+      Encoder #(
+          .CNT_W(`SET_DW)
+      ) tempo_enc (
+        .*,
+        .clr (set_clr),
+        .en  (set_en),
+        .data(smp_enc),
+        .enc (set_enc)
+      );
+
+      // update the AM only when the set accumulation is done
+      logic am_wr;
+      assign am_wr = set_clr && (state == `TRAIN);
+
+      always_ff @(posedge clk) begin : updateAM
+        if (am_wr) AM[l] <= set_enc;
+      end
+    end
+  endgenerate
 
   //==================== For interfering, query the AM ====================
   // when state is predicting
   logic [$clog2(`DIM) : 0] cls_simi[`CLS_NUM];
+  logic pred_en;
+  assign pred_en = smp_clr && (state == `PREDICT);
+
   generate
     // Check similarity
     for (genvar l = 0; l < `CLS_NUM; l++) begin : g_simi
       Similarity simi (
         .*,
+        .en  (pred_en),
         .a   (AM[l]),
         .b   (smp_enc),
         .simi(cls_simi[l])
@@ -112,6 +105,7 @@ module Rchdc (
   logic [`CLS_DW - 1 : 0] cls_min;
   FindMin maxcls (
     .*,
+    .en      (pred_en),
     .nums    (cls_simi),
     .indexMin(cls_min)
   );
