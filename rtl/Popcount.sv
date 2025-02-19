@@ -24,6 +24,7 @@ module Popcount #(
   output logic [$clog2(DW) - 1 : 0] pc_o
 );
 
+  // TODO: tree-based popcount
   always_comb begin
     pc_o = 0;
     for (int i = 0; i < DW; i++) begin

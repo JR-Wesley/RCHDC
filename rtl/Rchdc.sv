@@ -1,8 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: Shanghai, China
 // Engineer: Hanyu Zhang
-// Revision:
-//          2024/11/07 created
 // function:
 // parameter:
 //           DIM:
@@ -12,9 +10,6 @@
 //           predict
 // design:
 //          two encoding:
-// timing:
-//          train:
-//          predict:
 //////////////////////////////////////////////////////////////////////////////////
 `ifndef __RCHDC_SV__
 `define __RCHDC_SV__
@@ -24,6 +19,7 @@
 `include "./Similarity.sv"
 `include "./FindMin.sv"
 
+// TODO: datawidth partition, 1024 -> 32
 module Rchdc (
   input  logic  clk,
   input  logic  rst_n,
@@ -39,7 +35,6 @@ module Rchdc (
 
   //==================== For training or predicting, encode one sample ====================
   dw_t smp_enc;
-  logic smp_done;
 
   Encoder #(
       .CNT_W(`SMP_DW)
@@ -59,7 +54,6 @@ module Rchdc (
     for (genvar l = 0; l < `CLS_NUM; l++) begin : g_class
       logic set_en;
       assign set_en = smp_clr && (state == `TRAIN) && (label == l);
-      // `FFARN(set_en, smp_clr && (state == `TRAIN) && (label == l), clk, rst_n);
 
       dw_t set_enc;
       Encoder #(
@@ -101,16 +95,15 @@ module Rchdc (
     end
   endgenerate
 
-  // TODO: find the min Hum
+  logic min_en;
+  `FFARN(min_en, pred_en, clk, rst_n);
   logic [`CLS_DW - 1 : 0] cls_min;
-  FindMin maxcls (
+  FindMin mincls (
     .*,
-    .en      (pred_en),
+    .en      (min_en),
     .nums    (cls_simi),
     .indexMin(cls_min)
   );
-  // assign cls_max = (state != `PREDICT)? '0 :
-  //   (cls_simi[0] > cls_simi[1]) ? `CLS_DW'('d0) :`CLS_DW'('d1)  ;
 
   assign predict = (state == `PREDICT) ? cls_min : '0;
 

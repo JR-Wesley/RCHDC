@@ -7,13 +7,23 @@
 
 ### 两级量化
 
-## train
+1. 每个 sample，如一张图片、一句话，在累加后量化。
+2. 所有样本完成后，每个分类根据计数器的值二分量化。
 
 
+### 硬件开销
 
-## predict
+参数设置：
+- 维数: 1024
+- 类别: 32
+- 样本 size: 1024 (28*28)
+- 类别 数量: 1024例
 
+sample  encoding:
 
+class AM & footprint:
+
+simi humming (DIM )
 
 ## 子模块
 
@@ -31,9 +41,10 @@
 
 ## 编译工具
 
-For Iverilog, access [0] in array[0:0] raise error.
+For Iverilog, access [0] in array [0:0] raises an error.
 iverilog 编译 single element array 时报错，<a href="https://github.com/steveicarus/iverilog/pull/1115">issue</a> 此 PR 还未更新至 release，需要更新最新代码。
 
 # log
 smp_set.vcd: sample and set encoding.
+basic_train_predict.vcd: quantinization
 

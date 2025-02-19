@@ -130,15 +130,3 @@ def tensor2binStr(tensor: torch.Tensor) -> str:
     binary_str = ''.join(binary_str_list)
     # 在字符串前加上'0b'前缀
     return '0b' + binary_str
-
-
-def compare(dut, ref_model, console):
-    # conver to tensor and rotate
-    hw_set_enc = torch.zeros(ref_model.set_size, ref_model.dim)
-    for i in range(ref_model.set_size):
-        hw_set_enc[i] = hdc.binStr2tensor(
-            str(dut.AM[i].value.binstr), ref_mnist.cfg.DIM, prefix=False)
-    # assert torch.equal(hw_set_enc, ref_mnist.am(ref_mnist.label)), f"not equal"
-    print(hw_set_enc[0])
-    console.print(
-        "Function: all the AM HW value equals to ref model", style="bold red")

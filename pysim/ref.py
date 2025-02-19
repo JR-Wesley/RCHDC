@@ -27,19 +27,28 @@ class ref_model:
 
     def train(self):
 
-        if isinstance(set_size, int) and isinstance(sample_size, int):
-            for i in range(set_size):
-                for size in range(sample_size):
-                    self.smp_enc += self.im_feat[size] ^ self.im_pos[size]
+        if isinstance(self.set_size, int) and isinstance(self.sample_size, int):
+            for i in range(self.set_size):
+                for size in range(self.sample_size):
+                    # a trick to distinguish between samples
+                    index = i + size
+                    if index >= self.set_size:
+                        index -= self.set_size
+                    self.smp_enc += self.im_feat[index] ^ self.im_pos[size]
                 self.set_enc[i] += hdc.quant(self.smp_enc,
-                                          thre=(sample_size // 2)
-                self.set_cnt[i] += 1
+                                             thre=(self.sample_size // 2))
+                # reset sample encoding register
                 self.smp_enc.zero_()
-            self.amem[self.label[i]]=hdc.quant(self.set_enc[i], thre=0)
+                self.set_cnt[i] += 1
+            for i in range(self.set_size):
+                self.amem[i] = hdc.quant(
+                    self.set_enc[i], thre=(self.set_cnt[i] // 2))
+            # reset set counter
+            self.set_cnt = [0] * self.cfg.CLS_NUM
         else:
             raise TypeError("Configuration must be integers.")
 
-    def feat(self, set, sample):
+    def feat(self, sample):
         """
         Function
         ===
@@ -51,7 +60,7 @@ class ref_model:
         """
         return int(hdc.tensor2binStr(self.im_feat[sample]), 2)
 
-    def pos(self, set, sample):
+    def pos(self, sample):
         """
         Function
         ===
@@ -63,8 +72,8 @@ class ref_model:
         """
         return int(hdc.tensor2binStr(self.im_pos[sample]), 2)
 
-    # def am(self, label):
-    #     return self.amem[label]
+    def am(self, label):
+        return self.amem[label]
 
 
 def handle_dut(dut):
@@ -80,11 +89,28 @@ def handle_dut(dut):
         ---
         attrs: A string splitted by '.' representing the internal signals.
         """
-        at=attrs.split('.')
-        cur=dut
+        at = attrs.split('.')
+        cur = dut
         for a in at:
-            cur=getattr(cur, a)
+            cur = getattr(cur, a)
 
         print(attrs, ": ", getattr(cur, 'value'))
 
     return printSig
+
+
+def compare(dut, ref_model, console):
+    # conver to tensor and rotate
+    hw_set_enc = torch.zeros(ref_model.set_size, ref_model.dim)
+    for i in range(ref_model.set_size):
+        hw_set_enc[i] = hdc.binStr2tensor(
+            str(dut.AM[i].value.binstr), ref_model.cfg.DIM, prefix=False)
+        assert torch.equal(hw_set_enc[i], ref_model.am(i)), f"HW AM not equal"
+    console.print(
+        "Function: all the AM HW value equals to ref model", style="bold red")
+
+    cls_simi = [len(torch.nonzero(ref_model.am(i)))
+                for i in range(ref_model.set_size)]
+    min_val = min(cls_simi)
+    min_idx = cls_simi.index(min_val)
+    print(min_idx, dut.cls_min.value)
