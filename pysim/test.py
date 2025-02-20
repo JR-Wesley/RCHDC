@@ -17,7 +17,7 @@ def test_my_design_runner():
     test_module = "testbench,"
 
     # compiler arguments
-    wave_en = True
+    wave_en = False
     compiler = 'v'
 
     # some syntax is not supported in iverilog

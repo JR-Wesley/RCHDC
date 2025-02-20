@@ -2,10 +2,9 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from rich.console import Console
-import hdc
-import ref
 import torch
+from rich.console import Console
+import ref
 from config import Config
 
 
@@ -32,7 +31,7 @@ async def init(dut, pr):
     await RisingEdge(dut.clk)
 
 
-async def train(dut, ref_model, console):
+async def exp_train(dut, ref_model, console):
     """
     Func
     ===
@@ -42,15 +41,15 @@ async def train(dut, ref_model, console):
 
     dut.state.value = 0
     for num in range(ref_model.cfg.SET_SIZE):
+        dut.smp_en.value = 1
+        dut.label.value = ref_model.label[num]
+        dut.smp_clr.value = 0
         for size in range(ref_model.cfg.SMP_SIZE):
-            dut.smp_clr.value = 0
-            dut.smp_en.value = 1
             index = num + size
             if index >= ref_model.set_size:
                 index -= ref_model.set_size
             dut.im_value.value = ref_model.feat(index)
             dut.im_pos.value = ref_model.pos(size)
-            dut.label.value = ref_model.label[num]
             await RisingEdge(dut.clk)
 
         # sample done assert at the next cycle.
@@ -74,15 +73,22 @@ async def train(dut, ref_model, console):
     dut.set_clr.value = 0
 
 
-async def predict(dut, ref_model, lbl, console):
+async def exp_predict(dut, ref_model, lbl, console):
+    """
+    Func
+    ===
+    Input a set of random value form ref_model.
+    Compare with reference.
+
+    """
     dut.state.value = 1
+    dut.smp_clr.value = 0
+    dut.smp_en.value = 1
+    dut.label.value = ref_model.label[lbl]
     # stimu for DUT, training samples
     for size in range(ref_model.cfg.SMP_SIZE):
-        dut.smp_clr.value = 0
-        dut.smp_en.value = 1
-        dut.im_value.value = ref_model.feat(lbl)
+        dut.im_value.value = ref_model.feat(size)
         dut.im_pos.value = ref_model.pos(lbl)
-        dut.label.value = ref_model.label[lbl]
         await RisingEdge(dut.clk)
 
     # sample done assert at the next cycle.
@@ -94,8 +100,13 @@ async def predict(dut, ref_model, lbl, console):
     dut.smp_clr.value = 1
     await RisingEdge(dut.clk)
 
+    hw_pred_enc = ref.binStr2tensor(
+        str(dut.smp_enc.value.binstr), ref_model.cfg.DIM, prefix=False)
     dut.smp_clr.value = 0
     await RisingEdge(dut.clk)
+
+    await RisingEdge(dut.clk)
+    ref.compare(dut, ref_model, console, hw_pred_enc)
 
 
 @cocotb.test()  # type: ignore
@@ -105,19 +116,20 @@ async def testbench(dut):
     pr = ref.handle_dut(dut)
     con = Console()
     define_file_path = "../../rtl/Define.sv"
-    ref_mnist = ref.ref_model(define_file_path)
-    ref_mnist_p = ref.ref_model(define_file_path)
+    ref_simple = ref.ref_model(define_file_path)
+    ref_mnist = ref.ref_mnist()
 
     """ Init COCOTB, dut. """
     await init(dut, pr)
 
     """ For training, encode a set of samples and write into AM. """
-    await train(dut, ref_mnist, con)
+    await ref.mnist_train(dut, ref_mnist, con)
+    # await exp_train(dut, ref_simple, con)
 
     """ For predicting, encode one sample and compare """
-    await predict(dut, ref_mnist_p, 2, con)
-    await predict(dut, ref_mnist_p, 6, con)
-    ref.compare(dut, ref_mnist, con)
+    # await exp_predict(dut, ref_simple, 2, con)
+    # await exp_predict(dut, ref_simple, 7, con)
+    # await exp_predict(dut, ref_simple, 4, con)
 
-    for _ in range(3):
+    for _ in range(4):
         await RisingEdge(dut.clk)
