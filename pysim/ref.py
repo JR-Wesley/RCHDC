@@ -1,4 +1,6 @@
 import torch
+import torchmetrics
+
 from config import Config
 from cocotb.triggers import RisingEdge
 import imp
@@ -83,8 +85,9 @@ def tensor2binStr(tensor: torch.Tensor) -> str:
 class ref_mnist:
     device = torch.device("cuda")
     dataset_path = "../../../../py/data"
-    batch_size = 256
+    # TODO: only test one batch in experiment, dimension is short
     dim = 1024
+    batch_size = 256
     datatype = 'binary'  # 'binary' {0, 1} 'bipolar' {-1, 1}
     operation = 'MAP'
 
@@ -113,7 +116,12 @@ class ref_mnist:
                   pos_IM=self.position_IM, val_IM=self.grayscale_IM, num_classes=self.num_class,
                   if_quant=self.if_quant, datatype=self.datatype)
 
-    def hw_encode(self, img):
+    def hw_hv(self, img):
+        """
+        Function
+        ===
+        Get the hyperdimensional vectors for HW.
+        """
         img = img.to(self.device)
         img = torch.round(img.reshape(-1) * 255).to(torch.int32)
 
@@ -125,22 +133,51 @@ class ref_mnist:
 
         return (self.position_IM[pos_indices], self.grayscale_IM[pixel_indices])
 
+    def test(self):
+        accuracy = torchmetrics.Accuracy(
+            "multiclass", num_classes=num_class).to(device)
+
+        for sample, label in test_iter:
+            sample, label = sample.to(device), label.to(device)
+            hdc.test(accuracy, self.AM, X_test=sample, Y_test=label,
+                     pos_IM=self.position_IM, val_IM=self.grayscale_IM, if_quant=self.if_quant, datatype=self.datatype)
+            break
+
+        print(
+            f"Dimension {dim}: Test accuracy is {(accuracy.compute().item() * 100):.3f}%")
+
+    def hw_predict(self, img):
+        pass
+
 
 async def mnist_train(dut, ref_model, console):
     """
     Func
     ===
-    Train MNIST dataset in HW.
+    Train MNIST dataset.
+    Read in HW.
 
     """
-    # ref_model.train()
 
-    dut.state.value = 0
+    # get the first batch
     X_iter, Y_iter = next(iter(ref_model.train_iter))
-    # iterate over a batch of train dataset
+
+    """ golden model training, sum up a batch and quantinize """
+    # ref_model.train()
+    popcount = torch.zeros(ref_model.AM.shape[0])
+    hdc.train_epoch(ref_model.AM, X_iter, Y_iter, ref_model.position_IM,
+                    ref_model.grayscale_IM, if_quant=ref_model.if_quant, datatype=ref_model.datatype)
+    for l in Y_iter:
+        popcount[l] += 1
+    ref_model.AM[:] = torch.stack([hdc.quant(
+        vec, thre=popcount[i]//2, datatype=ref_model.datatype) for i, vec in enumerate(ref_model.AM)])
+
+    """ iterate over a batch for HW """
+    console.print(f"Start training.", style="red")
     num = 0
+    dut.state.value = 0
     for sample, label in zip(X_iter, Y_iter):
-        pos, val = ref_model.hw_encode(img=sample)
+        pos, val = ref_model.hw_hv(img=sample)
         # shape: (len(img), vector_size)
         dut.smp_clr.value = 0
         dut.smp_en.value = 1
@@ -153,6 +190,7 @@ async def mnist_train(dut, ref_model, console):
         # sample done assert at the next cycle.
         console.print(
             f"Timing: sample {num}, label {label:0{3}d} done.", style="blue")
+        num += 1
 
         dut.smp_en.value = 0
         # clear the spatio_enc for the next sample
@@ -164,21 +202,91 @@ async def mnist_train(dut, ref_model, console):
         sw_enc = hdc.encode(sample, ref_model.position_IM,
                             ref_model.grayscale_IM, if_quant=True, datatype=ref_model.datatype)
         hw_enc = hw_enc.to(ref_model.device)
-        assert torch.equal(hw_enc, sw_enc), f"HW AM not equal"
+        assert torch.equal(hw_enc, sw_enc), f"HW sample encoding not equal"
         dut.smp_clr.value = 0
         await RisingEdge(dut.clk)
 
-        num += 1
-        if (num == 8):
-            break
-
     # set done assert at the next cycle.
     console.print(
-        f"Timing: A batch set - {ref_model.batch_size} samples done.", style="blue")
+        f"Timing: A batch set - {ref_model.batch_size} samples done.", style="red")
 
     dut.set_clr.value = 1
     await RisingEdge(dut.clk)
     dut.set_clr.value = 0
+
+
+def min_simi(vec: torch.Tensor, amem):
+    """
+    Function
+    ===
+    Input {0, 1} vector and 2-dim amem.
+    Compare the vector with each vec in amem to find the min index.
+    """
+    hum_dist = torch.sum(vec != amem, dim=1)
+    min_idx = torch.argmin(hum_dist)
+    return min_idx
+
+
+async def mnist_predict(dut, ref_model, console):
+    """
+    Function
+    ===
+    Get the mnist testing dataset.
+    """
+    # golden model testing
+    # ref_model.test()
+
+    # get HW AM
+    hw_am = [binStr2tensor(str(dut.AM[i].value.binstr),
+                           ref_model.dim, prefix=False) for i in range(ref_model.num_class)]
+    hw_am = torch.stack(hw_am).to(ref_model.device)
+    assert torch.equal(hw_am, ref_model.AM), "AM not equal"
+
+    # get the first batch
+    X_iter, Y_iter = next(iter(ref_model.test_iter))
+
+    console.print(f"Start testing.", style="red")
+    num = 0
+    acc = 0
+    dut.state.value = 1
+    for sample, label in zip(X_iter, Y_iter):
+        pos, val = ref_model.hw_hv(img=sample)
+        dut.smp_clr.value = 0
+        dut.smp_en.value = 1
+        for i in range(ref_model.img_size):
+            dut.im_pos.value = int(tensor2binStr(pos[i][0]), 2)
+            dut.im_value.value = int(tensor2binStr(val[i][0]), 2)
+            await RisingEdge(dut.clk)
+
+        # sample done assert at the next cycle.
+
+        dut.smp_en.value = 0
+        # clear the spatio_enc for the next sample
+        dut.smp_clr.value = 1
+        await RisingEdge(dut.clk)
+
+        hw_enc = binStr2tensor(str(dut.smp_enc.value.binstr),
+                               ref_model.dim, prefix=False)
+        sw_enc = hdc.encode(sample, ref_model.position_IM,
+                            ref_model.grayscale_IM, if_quant=True, datatype=ref_model.datatype)
+        hw_enc = hw_enc.to(ref_model.device)
+        assert torch.equal(hw_enc, sw_enc), f"HW sample encoding not equal"
+        dut.smp_clr.value = 0
+        await RisingEdge(dut.clk)
+
+        # flip one cycle for the similarity check modules.
+        await RisingEdge(dut.clk)
+        # golden model update
+        sw_idx = min_simi(sw_enc, ref_model.AM)
+        hw_idx = dut.cls_min.value.integer
+        console.print(
+            f"Predicting {num}: label {label:0{3}d} done. SW - {sw_idx} HW - {hw_idx}", style="red")
+        if hw_idx == label.item():
+            acc += 1
+        num += 1
+
+    console.print(f"Timing testing done.")
+    console.print(f"Accuracy is {acc / num * 100:.4f}%")
 
 
 class ref_model:
@@ -250,7 +358,7 @@ class ref_model:
         """
         return int(tensor2binStr(self.im_pos[sample]), 2)
 
-    def AM(self, label):
+    def am_lbl(self, label):
         return self.amem[label]
 
 
@@ -283,11 +391,12 @@ def compare(dut, ref_model, console, hw_enc):
     for i in range(ref_model.set_size):
         hw_set_enc[i] = binStr2tensor(
             str(dut.AM[i].value.binstr), ref_model.cfg.DIM, prefix=False)
-        assert torch.equal(hw_set_enc[i], ref_model.am(i)), f"HW AM not equal"
+        assert torch.equal(
+            hw_set_enc[i], ref_model.am_lbl(i)), f"HW AM not equal"
     console.print(
         "Function: all the AM HW value equals to ref model", style="bold red")
 
-    cls_simi = [len(torch.nonzero(ref_model.am(i) ^ hw_enc))
+    cls_simi = [len(torch.nonzero(ref_model.am_lbl(i) ^ hw_enc))
                 for i in range(ref_model.set_size)]
     min_val = min(cls_simi)
     min_idx = cls_simi.index(min_val)

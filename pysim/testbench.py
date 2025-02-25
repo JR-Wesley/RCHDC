@@ -124,12 +124,14 @@ async def testbench(dut):
 
     """ For training, encode a set of samples and write into AM. """
     await ref.mnist_train(dut, ref_mnist, con)
-    # await exp_train(dut, ref_simple, con)
 
     """ For predicting, encode one sample and compare """
+    for _ in range(4):
+        await RisingEdge(dut.clk)
+    await ref.mnist_predict(dut, ref_mnist, con)
+
+    """ test using mini dataset """
+    # await exp_train(dut, ref_simple, con)
     # await exp_predict(dut, ref_simple, 2, con)
     # await exp_predict(dut, ref_simple, 7, con)
     # await exp_predict(dut, ref_simple, 4, con)
-
-    for _ in range(4):
-        await RisingEdge(dut.clk)
